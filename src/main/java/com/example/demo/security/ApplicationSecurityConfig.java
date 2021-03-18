@@ -1,6 +1,8 @@
 package com.example.demo.security;
 
 import com.example.demo.auth.ApplicationUserService;
+import com.example.demo.jwt.JwtTokenVerifier;
+import com.example.demo.jwt.JwtUsernameAndPasswordAuthenticationFilter;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +14,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -62,10 +65,18 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-                //TODO 6) важное добавление -  в начале выключено, потом заредактирываем и включаем CSRF token для теста
+                // TODO 6) важное добавление -  в начале выключено, потом заредактирываем и включаем CSRF token для теста
                 .csrf().disable()
 //                .csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
 //                .and()
+                // TODO 12) улучшение кода - добавляем sessionManagement() и STATELESS - нет привязки ????
+                .sessionManagement()
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                // TODO 11) улучшение кода - добавляем фильтр  из jwt и убираем все с TODO 10)
+                .addFilter(new JwtUsernameAndPasswordAuthenticationFilter(authenticationManager()))
+                // TODO 13) вводим второй фильтр
+                .addFilterAfter(new JwtTokenVerifier(), JwtUsernameAndPasswordAuthenticationFilter.class)
                 .authorizeRequests()
                 .antMatchers("/", "index", "/css/*", "/js/*").permitAll()
                 .antMatchers("/api/**").hasRole(STUDENT.name()) // TODO только студенты могут заходить по данному пути
@@ -90,7 +101,12 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
                 // TODO убираем, тк задействуем это ограничение в HttpMethod.GET
                 //.antMatchers("/management/api/**").hasAnyRole(ADMIN.name(), ADMINTRAINEE.name())
                 .anyRequest()
-                .authenticated()
+                .authenticated();
+
+                // TODO 10 ) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                // TODO улучшение кода
+                // TODO при подключении jwt - это уже не нужно
+        /*
                 .and()
 
                 // TODO 6) включение BASE_AUTIFICATION
@@ -121,9 +137,16 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
                     .clearAuthentication(true)
                     .invalidateHttpSession(true)
                     .deleteCookies("JSESSIONID", "remember-me")
-                    .logoutSuccessUrl("/login");
+                    .logoutSuccessUrl("/login")
                 // TODO 7) прописываем действие если выходим по logout - удаление из кукис JSESSIONID и значения  remember-me тк
                 // TODO они сохнаянются на 30 мин
+                .and()
+                // TODO 9) сам нашел на - https://stackoverflow.com/questions/46421185/remember-me-not-working-throws-java-lang-illegalstateexception-userdetailsse
+                // TODO без этого - throws java.lang.IllegalStateException: UserDetailsService is required
+                .rememberMe()
+                    .key("uniqueAndSecret")
+                    .userDetailsService(applicationUserService);
+         */
     }
     // TODO улучшение кода - появился класс FakeApplicationDaoService и ApplicationUserDao
 /*
